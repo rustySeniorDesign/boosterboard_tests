@@ -1,0 +1,6 @@
+[submodule "msp430fr2x5x-hal"]
+	path = msp430fr2x5x-hal
+	url = git@github.com:rustySeniorDesign/msp430fr2x5x-hal.git
+[submodule "msp430fr2355"]
+	path = msp430fr2355
+	url = git@github.com:rustySeniorDesign/msp430fr2355.git
