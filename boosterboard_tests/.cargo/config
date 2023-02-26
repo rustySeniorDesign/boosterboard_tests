@@ -1,0 +1,21 @@
+[target.msp430-none-elf]
+# For debugging
+runner = "bash ./debug.sh"
+# For running
+#runner = "bash ./run.sh"
+
+rustflags = [
+    "-C", "link-arg=-nostartfiles",
+    "-C", "link-arg=-Tlink.x",
+    "-C", "link-arg=-lgcc",
+    "-C", "link-arg=-lmul_none",
+    "-C", "link-arg=-mcpu=msp430",
+]
+
+[build]
+target = "msp430-none-elf"
+
+[unstable]
+# MSP430 doesn't come with libcore compiled already. But when it does, this
+# key can be removed.
+build-std = ["core"]

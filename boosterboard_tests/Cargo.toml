@@ -1,0 +1,31 @@
+[package]
+name = "boosterboard_tests"
+version = "0.0.1"
+edition = "2023"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+msp430 = "0.4.0"
+msp430-rt = "0.4.0"
+panic-msp430 = "0.4.0"
+embedded-hal = { version = "0.2.7", features = ["unproven"] }
+msp430fr2x5x-hal = { path = "../msp430fr2x5x-hal" }
+
+[dependencies.msp430fr2355]
+features = ["rt"]
+# features = ["rt", "critical-section"] # critical-section gives build errors
+path = "../msp430fr2355"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = "z"
+
+[profile.dev]
+opt-level = "s"
+codegen-units = 1
+debug = true
+
+[profile.dev.package."*"]
+opt-level = "z"
