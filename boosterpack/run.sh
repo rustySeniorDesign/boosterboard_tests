@@ -1,2 +1,4 @@
 #!/usr/bin/env bash
-mspdebug --allow-fw-update tilib "prog $1 & run"
+thing=$1
+file=${thing//\\//}
+mspdebug --allow-fw-update tilib "prog ./$file"

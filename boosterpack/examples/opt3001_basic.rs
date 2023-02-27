@@ -101,8 +101,8 @@ fn main() -> ! {
 
         // P1.3 SCL, P1.2 SDA
         let p1 = Batch::new(periph.P1).split(&pmm);
-        let mut config: I2CBusConfig<E_USCI_B0> = I2CBusConfig::new(periph.E_USCI_B0, 8);
-        config.use_aclk(&aclk);
+        let mut config: I2CBusConfig<E_USCI_B0> = I2CBusConfig::new(periph.E_USCI_B0, 12);
+        config.use_smclk(&_smclk);
         let mut periph_i2c : SDL<E_USCI_B0> = config.sdl(p1.pin3.to_alternate1(), p1.pin2.to_alternate1());
         //
         print_bytes(b"I2C peripheral configured\n\nConfiguring opt3001 sensor...\n");
@@ -120,8 +120,9 @@ fn main() -> ! {
         let address:u8 = 0x44;
         let config_cmd: [u8; 3] = [0x1, 0xC4, 0x10];
         let is_ok;
-        let mut res = periph_i2c.write(address, &[0x1, 0xC4, 0x10])
+        let mut res = periph_i2c.write(address, &config_cmd)
             .and_then(|_| {periph_i2c.write(address, &[0x00u8])});
+            // .and_then(|_| {periph_i2c.write(address, &[0xFFu8])});
         match res{
             Ok(()) =>  {
                 print_bytes(b"Configuration successful\n\n");
@@ -141,6 +142,8 @@ fn main() -> ! {
             print_bytes(b"Polling from device...\n");
             let mut buf : [u8; 2] = [0;2];
             loop {
+                buf[0] = 0;
+                buf[1] = 0;
                 match periph_i2c.read(address, &mut buf) {
                     Ok(()) =>  {
                         let mut byte_chars : [u8;2] = [0;2];
