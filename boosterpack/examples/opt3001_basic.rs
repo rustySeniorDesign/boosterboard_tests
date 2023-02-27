@@ -16,6 +16,8 @@ use msp430fr2x5x_hal::{
 };
 use msp430fr2355_boosterpack::opt3001;
 use core::panic::PanicInfo;
+use core::str::Bytes;
+use msp430fr2355_boosterpack::opt3001::DeviceOpt3001;
 
 static mut TX_GLOBAL: Option<Tx<E_USCI_A1>> = None;
 
@@ -35,7 +37,16 @@ fn panic(_info: &PanicInfo) -> ! {
     // Disable interrupts to prevent further damage.
     msp430::interrupt::disable();
     unsafe {
-        print_bytes(b"Panic handler was called, something bad happened.\n");
+        if let Some(location) = _info.location() {
+            print_bytes(b"Panic occurred in file ");
+            print_bytes(location.file().as_bytes());
+            print_bytes(b" at line ");
+            // print_bytes(location.file().to_bytes());
+            print_bytes(b"\n");
+        } else {
+            print_bytes(b"Panic handler was called, something bad happened.\n");
+        }
+
     }
     loop {
         // Prevent optimizations that can remove this loop.
@@ -43,28 +54,59 @@ fn panic(_info: &PanicInfo) -> ! {
     }
 }
 
-// #[cfg(debug_assertions)]
-// // use panic_msp430 as _;
-// #[cfg(not(debug_assertions))]
-// use panic_never as _;
 
-fn byte_to_dec(byte:u8, out_buf:&mut [u8]){
-    let digit1 = byte/100;
-
-    out_buf[0] = (digit1) + b'0';
-    out_buf[1] = digit1/10 + b'0';
-    out_buf[2] = digit1%10 + b'0';
+fn byte_to_dec(val:u8) -> [u8;3]{
+    let mut out_buf: [u8;3] = [0;3];
+    let mut over_ten = val;
+    for i in 0..=2 {
+        let next = over_ten / 10;
+        out_buf[2-i] = ((over_ten - (next * 10) ) as u8) + b'0';
+        over_ten = next;
+    }
+    out_buf
 }
 
-fn byte_to_hex(byte:u8, out_buf:&mut [u8]){
-    out_buf[0] = ((byte&0xF0) >> 4) + b'0';
-    out_buf[1] = ((byte&0x0F) >> 4) + b'0';
-    if out_buf[0] > b'9' {
-        out_buf[0] += 7;
+fn u32_to_dec(val:u32) -> [u8;9]{
+    let mut out_buf: [u8;9] = [0;9];
+    let mut over_ten = val;
+    for i in 0..=8 {
+        let next = over_ten / 10;
+        out_buf[8-i] = ((over_ten - (next * 10) ) as u8) + b'0';
+        over_ten = next;
     }
-    if out_buf[1] > b'9' {
-        out_buf[1] += 7;
-    }
+    out_buf
+}
+
+static HEX_LOOKUP: [u8;16] = [b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7',
+                              b'8', b'9', b'A', b'B', b'C', b'D', b'E', b'F'];
+
+fn byte_to_hex(val:u8) -> [u8;2] {
+    [
+        HEX_LOOKUP[((val&0xF0) >> 4) as usize],
+        HEX_LOOKUP[(val&0x0F) as usize],
+    ]
+}
+
+fn u16_to_hex(val:u16) -> [u8;4]{
+    [
+        HEX_LOOKUP[((val&0xF000) >> 12) as usize],
+        HEX_LOOKUP[((val&0x0F00) >> 8) as usize],
+        HEX_LOOKUP[((val&0x00F0) >> 4) as usize],
+        HEX_LOOKUP[(val&0x000F) as usize]
+    ]
+}
+
+fn u32_to_hex(val:u32) -> [u8;8]{
+    [
+        HEX_LOOKUP[((val&0xF0000000) >> 28) as usize],
+        HEX_LOOKUP[((val&0x0F000000) >> 24) as usize],
+        HEX_LOOKUP[((val&0x00F00000) >> 20) as usize],
+        HEX_LOOKUP[((val&0x000F0000) >> 16) as usize],
+        HEX_LOOKUP[((val&0x0000F000) >> 12) as usize],
+        HEX_LOOKUP[((val&0x00000F00) >> 8) as usize],
+        HEX_LOOKUP[((val&0x000000F0) >> 4) as usize],
+        HEX_LOOKUP[ (val&0x0000000F) as usize]
+    ]
 }
 
 #[entry]
@@ -101,70 +143,45 @@ fn main() -> ! {
 
         // P1.3 SCL, P1.2 SDA
         let p1 = Batch::new(periph.P1).split(&pmm);
-        let mut config: I2CBusConfig<E_USCI_B0> = I2CBusConfig::new(periph.E_USCI_B0, 12);
-        config.use_smclk(&_smclk);
+        let mut config: I2CBusConfig<E_USCI_B0> = I2CBusConfig::new(periph.E_USCI_B0);
+        config.use_smclk(&_smclk, 5);// ~100 MHz
         let mut periph_i2c : SDL<E_USCI_B0> = config.sdl(p1.pin3.to_alternate1(), p1.pin2.to_alternate1());
-        //
+
         print_bytes(b"I2C peripheral configured\n\nConfiguring opt3001 sensor...\n");
 
-        // address:  1000100 (0x44)
-        // config reg (0x1):
-        // 15:12 : 1100
-        // 11 : 0
-        // 10:9 : 10
-        // 8:5 : dc
-        // 4 : 1
-        // 3 : 0
-        // 2 : 0
-        // 1:0 : 00
-        let address:u8 = 0x44;
-        let config_cmd: [u8; 3] = [0x1, 0xC4, 0x10];
-        let is_ok;
-        let mut res = periph_i2c.write(address, &config_cmd)
-            .and_then(|_| {periph_i2c.write(address, &[0x00u8])});
-            // .and_then(|_| {periph_i2c.write(address, &[0xFFu8])});
-        match res{
-            Ok(()) =>  {
+
+        let mut device : DeviceOpt3001<E_USCI_B0>;
+        match DeviceOpt3001::new(periph_i2c){
+            Ok(dev) =>  {
+                device = dev;
                 print_bytes(b"Configuration successful\n\n");
-                is_ok = true;
+                print_bytes(b"Polling from device...\n");
+                loop {
+                    match device.read_light() {
+                        Ok(res) =>  {
+                            print_bytes(b"lux: ");
+                            print_bytes(&u32_to_dec(res.whole)[3..=8]);
+                            print_bytes(b".");
+                            print_bytes(&byte_to_dec(res.frac)[1..=2]);
+                            print_bytes(b"\n");
+                        },
+                        _ => {
+                            print_bytes(b"Read failed\n");
+                            break;
+                        }
+                    }
+                    for _ in 0..50000 {
+                        msp430::asm::nop();
+                    }
+                }
             },
             Err(I2CErr::GotNACK) => {
                 print_bytes(b"Configuration failed: got NACK response\n\n");
-                is_ok = false;
             },
             _ => {
                 print_bytes(b"Configuration failed\n\n");
-                is_ok = false;
             }
         };
-
-        if is_ok {
-            print_bytes(b"Polling from device...\n");
-            let mut buf : [u8; 2] = [0;2];
-            loop {
-                buf[0] = 0;
-                buf[1] = 0;
-                match periph_i2c.read(address, &mut buf) {
-                    Ok(()) =>  {
-                        let mut byte_chars : [u8;2] = [0;2];
-                        byte_to_hex(buf[1], &mut byte_chars);
-                        print_bytes(b"0x");
-                        print_bytes(&byte_chars);
-                        byte_to_hex(buf[0], &mut byte_chars);
-                        print_bytes(&byte_chars);
-                        print_bytes(b"\n");
-                    },
-                    _ => {
-                        print_bytes(b"Read failed\n");
-                        break;
-                    }
-                }
-                for _ in 0..50000 {
-                    msp430::asm::nop();
-                }
-            }
-        }
-
     }
     loop {}
 }
