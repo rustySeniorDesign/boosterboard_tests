@@ -41,7 +41,7 @@ fn panic(_info: &PanicInfo) -> ! {
             print_bytes(b"Panic occurred in file ");
             print_bytes(location.file().as_bytes());
             print_bytes(b" at line ");
-            // print_bytes(location.file().to_bytes());
+            print_bytes(&u32_to_dec(location.line()));
             print_bytes(b"\n");
         } else {
             print_bytes(b"Panic handler was called, something bad happened.\n");

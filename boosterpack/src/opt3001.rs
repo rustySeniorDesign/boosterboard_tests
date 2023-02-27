@@ -15,9 +15,9 @@ pub struct DeviceOpt3001<USCI: EUsciI2CBus>{
 
 /// Sensor result converted into units of lux
 pub struct Lux{
-    /// integer component of lux measurement
+    /// integer component of lux measurement, range: 83865-0
     pub whole:u32,
-    /// fractional component of lux measurement
+    /// fractional component of lux measurement, range: 99-0
     pub frac: u8
 }
 
