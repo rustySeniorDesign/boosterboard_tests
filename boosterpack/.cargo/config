@@ -1,8 +1,8 @@
 [target.msp430-none-elf]
 # For debugging
-runner = "bash ./debug.sh"
+#runner = "bash ./debug.sh"
 # For running
-#runner = "bash ./run.sh"
+runner = "bash ./run.sh"
 
 rustflags = [
     "-C", "link-arg=-nostartfiles",
