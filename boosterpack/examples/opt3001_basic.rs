@@ -1,3 +1,7 @@
+//! Usage example for the OPT3001 driver
+//!
+//! Also contains a few utilities related to serial output
+
 #![no_main]
 #![no_std]
 
