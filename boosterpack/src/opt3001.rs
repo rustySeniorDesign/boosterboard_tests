@@ -1,8 +1,6 @@
 //! Driver for the OPT3001 Ambient Light Sensor
 use embedded_hal::prelude::{_embedded_hal_blocking_i2c_Read, _embedded_hal_blocking_i2c_Write};
-use msp430fr2355::PMM;
-use msp430fr2x5x_hal::i2c::{EUsciI2CBus, I2CBusConfig, I2CErr, SDL};
-use crate::msp_hal::i2c;
+use msp430fr2x5x_hal::i2c::{EUsciI2CBus, I2CErr, SDL};
 
 static OPT3001_ADDRESS:u8 = 0x44;
 

@@ -5,12 +5,11 @@
 #![no_main]
 #![no_std]
 
-use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::prelude::*;
 use msp430_rt::entry;
-use msp430fr2355::{E_USCI_A1, E_USCI_B0, Peripherals};
+use msp430fr2355::{E_USCI_A1, E_USCI_B0};
 use msp430fr2x5x_hal::{
-    clock::{ClockConfig, DcoclkFreqSel, MclkDiv, SmclkDiv, Aclk},
+    clock::{ClockConfig, DcoclkFreqSel, MclkDiv, SmclkDiv},
     fram::Fram,
     gpio::Batch,
     pmm::Pmm,
@@ -18,9 +17,7 @@ use msp430fr2x5x_hal::{
     watchdog::Wdt,
     i2c::*,
 };
-use msp430fr2355_boosterpack::opt3001;
 use core::panic::PanicInfo;
-use core::str::Bytes;
 use msp430fr2355_boosterpack::opt3001::DeviceOpt3001;
 
 static mut TX_GLOBAL: Option<Tx<E_USCI_A1>> = None;
@@ -40,17 +37,14 @@ fn print_bytes(bytes:&[u8]){
 fn panic(_info: &PanicInfo) -> ! {
     // Disable interrupts to prevent further damage.
     msp430::interrupt::disable();
-    unsafe {
-        if let Some(location) = _info.location() {
-            print_bytes(b"Panic occurred in file ");
-            print_bytes(location.file().as_bytes());
-            print_bytes(b" at line ");
-            print_bytes(&u32_to_dec(location.line()));
-            print_bytes(b"\n");
-        } else {
-            print_bytes(b"Panic handler was called, something bad happened.\n");
-        }
-
+    if let Some(location) = _info.location() {
+        print_bytes(b"Panic occurred in file ");
+        print_bytes(location.file().as_bytes());
+        print_bytes(b" at line ");
+        print_bytes(&u32_to_dec(location.line()));
+        print_bytes(b"\n");
+    } else {
+        print_bytes(b"Panic handler was called, something bad happened.\n");
     }
     loop {
         // Prevent optimizations that can remove this loop.
@@ -149,7 +143,7 @@ fn main() -> ! {
         let p1 = Batch::new(periph.P1).split(&pmm);
         let mut config: I2CBusConfig<E_USCI_B0> = I2CBusConfig::new(periph.E_USCI_B0);
         config.use_smclk(&_smclk, 5);// ~100 MHz
-        let mut periph_i2c : SDL<E_USCI_B0> = config.sdl(p1.pin3.to_alternate1(), p1.pin2.to_alternate1());
+        let periph_i2c : SDL<E_USCI_B0> = config.sdl(p1.pin3.to_alternate1(), p1.pin2.to_alternate1());
 
         print_bytes(b"I2C peripheral configured\n\nConfiguring opt3001 sensor...\n");
 
