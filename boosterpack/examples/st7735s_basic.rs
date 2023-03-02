@@ -26,28 +26,32 @@ use msp430fr2355_boosterpack::{
     serial_utils::{print_bytes, u32_to_dec, byte_to_dec, init_serial, u16_to_dec}
 };
 use st7735_lcd::ST7735;
-use embedded_graphics::prelude::*;
+use embedded_graphics::{image::Image, prelude::*};
 use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
+use tinybmp::Bmp;
 
-#[cfg(debug_assertions)]
+// #[cfg(debug_assertions)]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     // Disable interrupts to prevent further damage.
     msp430::interrupt::disable();
-    if let Some(location) = _info.location() {
-        print_bytes(b"Panic occurred in file ");
-        print_bytes(location.file().as_bytes());
-        print_bytes(b" at line ");
-        print_bytes(&u32_to_dec(location.line()));
-        print_bytes(b"\n");
-    } else {
+    // if let Some(location) = _info.location() {
+    //     print_bytes(b"Panic occurred in file ");
+    //     print_bytes(location.file().as_bytes());
+    //     print_bytes(b" at line ");
+    //     print_bytes(&u32_to_dec(location.line()));
+    //     print_bytes(b"\n");
+    // } else {
         print_bytes(b"Panic handler was called.\n");
-    }
+    // }
     loop {
         // Prevent optimizations that can remove this loop.
         msp430::asm::barrier();
     }
 }
+
+// #[cfg(not(debug_assertions))]
+// use panic_never as _;
 
 #[entry]
 fn main() -> ! {
@@ -102,17 +106,21 @@ fn main() -> ! {
         match screen.init(&mut delay) {
             Ok(_) => {
                 screen.set_offset(2,1);
+                screen.set_orientation(&st7735_lcd::Orientation::PortraitSwapped).ok();
                 print_bytes(b"Screen initialized.\n");
+                let bmp_data = include_bytes!("../assets/rusty.bmp");
+                let bmp = Bmp::from_slice(bmp_data).unwrap();
+                Image::new(&bmp, Point::new(0, 0)).draw(&mut screen).ok();
                 // screen.set_pixel(50, 50, 0x0u16).ok();
                 // screen.set_pixel(51, 50, 0x0u16).ok();
                 // screen.set_pixel(50, 51, 0x0u16).ok();
                 // screen.set_pixel(51, 51, 0x0u16).ok();
 
-                loop {
-                    screen.clear(Rgb565::BLUE).ok();
-                    delay.delay_ms(1000u16);
-                    screen.clear(Rgb565::RED).ok();
-                }
+                // loop {
+                //     screen.clear(Rgb565::BLUE).ok();
+                //     delay.delay_ms(1000u16);
+                //     screen.clear(Rgb565::RED).ok();
+                // }
             }
             Err(_) => {
                 print_bytes(b"Screen init failed.\n")

@@ -13,6 +13,8 @@ embedded-hal = { version = "0.2.7", features = ["unproven"] }
 msp430fr2x5x-hal = { path = "../msp430fr2x5x-hal" }
 st7735-lcd = {version="0.8.1", features = ["graphics"]}
 embedded-graphics = "0.7.1"
+tinybmp = "0.4.0"
+panic-never = "0.1.0"
 
 [dependencies.msp430fr2355]
 #features = ["rt"]
