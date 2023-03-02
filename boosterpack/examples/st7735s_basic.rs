@@ -17,7 +17,7 @@ use msp430fr2x5x_hal::{
 };
 use core::panic::PanicInfo;
 use embedded_hal::digital::v2::OutputPin;
-use embedded_hal::prelude::_embedded_hal_blocking_delay_DelayMs;
+use embedded_hal::prelude::{_embedded_hal_blocking_delay_DelayMs, _embedded_hal_blocking_spi_Write};
 use embedded_hal::spi::MODE_0;
 use msp430::interrupt;
 use msp430fr2x5x_hal::spi::SPIBusConfig;
@@ -55,7 +55,7 @@ fn main() -> ! {
         let mut fram = Fram::new(periph.FRCTL);
         let _wdt = Wdt::constrain(periph.WDT_A);
         let (smclk, aclk, mut delay) = ClockConfig::new(periph.CS)
-            .mclk_dcoclk(DcoclkFreqSel::_4MHz, MclkDiv::_1)
+            .mclk_dcoclk(DcoclkFreqSel::_16MHz, MclkDiv::_1)
             .smclk_on(SmclkDiv::_2)
             .aclk_refoclk()
             .freeze(&mut fram);
@@ -84,9 +84,9 @@ fn main() -> ! {
         // P4.5: SCLK
         // P4.4: CS
         // P3.2: rs
-        let mut spi_config : SPIBusConfig<E_USCI_B1> = SPIBusConfig::new(periph.E_USCI_B1, MODE_0);
-        spi_config.use_smclk(&smclk, 40);
-        let periph_spi : SPIPins<E_USCI_B1> = spi_config.spi_pins(
+        let mut spi_config : SPIBusConfig<E_USCI_B1> = SPIBusConfig::new(periph.E_USCI_B1, MODE_0, true);
+        spi_config.use_smclk(&smclk, 5);
+        let mut periph_spi : SPIPins<E_USCI_B1> = spi_config.spi_pins(
             p4.pin7.to_alternate1(),
             p4.pin6.to_alternate1(),
             p4.pin5.to_alternate1(),
@@ -97,17 +97,21 @@ fn main() -> ! {
         let p3 = Batch::new(periph.P3).split(&pmm);
         let mut lcd_rst = p4.pin0.to_output();
         let mut lcd_rs = p3.pin2.to_output();
-        let mut screen = ST7735::new(periph_spi, lcd_rs, lcd_rst, true, false, 128, 128);
+        // periph_spi.write(&[0xC4,0x51]).ok();
+        let mut screen = ST7735::new(periph_spi, lcd_rs, lcd_rst, false, false, 128, 128);
         match screen.init(&mut delay) {
             Ok(_) => {
+                screen.set_offset(2,1);
                 print_bytes(b"Screen initialized.\n");
-                screen.set_pixel(50, 50, 0x0u16).ok();
-                screen.set_pixel(51, 50, 0x0u16).ok();
-                screen.set_pixel(50, 51, 0x0u16).ok();
-                screen.set_pixel(51, 51, 0x0u16).ok();
-                // screen.clear(Rgb565::BLACK).ok();
-                loop {
+                // screen.set_pixel(50, 50, 0x0u16).ok();
+                // screen.set_pixel(51, 50, 0x0u16).ok();
+                // screen.set_pixel(50, 51, 0x0u16).ok();
+                // screen.set_pixel(51, 51, 0x0u16).ok();
 
+                loop {
+                    screen.clear(Rgb565::BLUE).ok();
+                    delay.delay_ms(1000u16);
+                    screen.clear(Rgb565::RED).ok();
                 }
             }
             Err(_) => {
