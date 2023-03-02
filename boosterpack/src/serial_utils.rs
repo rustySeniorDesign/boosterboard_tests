@@ -1,16 +1,9 @@
+//! A few utilities related to serial output
+
 use embedded_hal::prelude::_embedded_hal_blocking_serial_Write;
-use msp430fr2x5x_hal::serial::{SerialUsci, Tx};
+use msp430fr2x5x_hal::serial::Tx;
 use crate::pac;
 use crate::pac::E_USCI_A1;
-use msp430fr2x5x_hal::{
-    clock::{ClockConfig, DcoclkFreqSel, MclkDiv, SmclkDiv},
-    fram::Fram,
-    gpio::Batch,
-    pmm::Pmm,
-    serial::*,
-    watchdog::Wdt,
-};
-use msp430fr2x5x_hal::clock::Aclk;
 
 static mut TX_GLOBAL: Option<Tx<E_USCI_A1>> = None;
 
@@ -38,6 +31,18 @@ pub fn byte_to_dec(val:u8) -> [u8;3]{
     }
     out_buf
 }
+
+pub fn u16_to_dec(val:u16) -> [u8;5]{
+    let mut out_buf: [u8;5] = [0;5];
+    let mut over_ten = val;
+    for i in 0..=4 {
+        let next = over_ten / 10;
+        out_buf[4-i] = ((over_ten - (next * 10) ) as u8) + b'0';
+        over_ten = next;
+    }
+    out_buf
+}
+
 
 pub fn u32_to_dec(val:u32) -> [u8;9]{
     let mut out_buf: [u8;9] = [0;9];

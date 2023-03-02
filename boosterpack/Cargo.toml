@@ -11,6 +11,8 @@ msp430-rt = "0.4.0"
 #panic-msp430 = "0.4.0"
 embedded-hal = { version = "0.2.7", features = ["unproven"] }
 msp430fr2x5x-hal = { path = "../msp430fr2x5x-hal" }
+st7735-lcd = {version="0.8.1", features = ["graphics"]}
+embedded-graphics = "0.7.1"
 
 [dependencies.msp430fr2355]
 #features = ["rt"]
