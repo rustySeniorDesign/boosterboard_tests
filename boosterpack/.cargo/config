@@ -2,7 +2,8 @@
 # For debugging
 #runner = "bash ./debug.sh"
 # For running
-runner = "bash ./run.sh"
+# runner = "bash ./run.sh"
+runner = "./run.bat"
 
 rustflags = [
     "-C", "link-arg=-nostartfiles",
