@@ -76,7 +76,7 @@ fn main() -> ! {
             StopBits::OneStopBit,
             Parity::NoParity,
             Loopback::NoLoop,
-            38400,
+            115200,
         )
         .use_smclk(&smclk)
         .split(p4.pin3.to_alternate1(), p4.pin2.to_alternate1());

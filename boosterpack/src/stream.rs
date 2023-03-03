@@ -62,11 +62,11 @@ impl ImageContainer{
         self.x = byte_buf[0];
         serial_utils::get_bytes(&mut byte_buf).ok();
         self.y = byte_buf[0];
-        let mut rd_buf = [0u8;256];
-        for i in (0..self.colors.len()).step_by(128){
-            serial_utils::print_bytes(&[0xAAu8]);
+        let mut rd_buf = [0u8;512];
+        serial_utils::print_bytes(&[0xAAu8]);
+        for i in (0..self.colors.len()).step_by(256){
             serial_utils::get_bytes(&mut rd_buf).ok();
-            for j in (0..256).step_by(2){
+            for j in (0..512).step_by(2){
                 let idx= j >> 1;
                 self.colors[i+idx] = Rgb565::from(RawU16::new(to_u16(&rd_buf[j..j+2])));
             }
