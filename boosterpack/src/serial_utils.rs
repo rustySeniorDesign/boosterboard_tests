@@ -1,13 +1,18 @@
 //! A few utilities related to serial output
 
+use nb;
 use embedded_hal::prelude::_embedded_hal_blocking_serial_Write;
-use msp430fr2x5x_hal::serial::Tx;
+use embedded_hal::prelude::_embedded_hal_serial_Read;
+use msp430fr2x5x_hal::serial;
+use msp430fr2x5x_hal::serial::{Rx, Tx};
 use crate::pac;
 use crate::pac::E_USCI_A1;
 
+static mut RX_GLOBAL: Option<Rx<E_USCI_A1>> = None;
 static mut TX_GLOBAL: Option<Tx<E_USCI_A1>> = None;
 
-pub fn init_serial(tx: Tx<E_USCI_A1>){
+pub fn init_serial(rx: Rx<E_USCI_A1>, tx: Tx<E_USCI_A1>){
+    unsafe{RX_GLOBAL = Some(rx);}
     unsafe{TX_GLOBAL = Some(tx);}
 }
 
@@ -16,9 +21,37 @@ pub fn print_bytes(bytes:&[u8]){
         if TX_GLOBAL.is_some() {
             let tx = TX_GLOBAL.as_mut().expect("no tx!");
             tx.bwrite_all(bytes).ok();
+            // tx.bflush().ok();
         }
 
     }
+}
+
+pub fn get_bytes(bytes:&mut [u8]) -> Result<(), ()>{
+    match unsafe{RX_GLOBAL.as_mut()} {
+        Some(rx) => {
+            for i in 0..bytes.len(){
+                match nb::block!(rx.read()) {
+                    Ok(data) => {
+                        bytes[i] = data;
+                        // print_bytes(&[0xAAu8]);
+                    }
+                    Err(serial::RecvError::Overrun(data)) => {
+                        // bytes[i] = data;
+                        // return Err(());
+                    }
+                    Err(_) => {
+                        return Err(());
+                    }
+                };
+            }
+            Ok(())
+        }
+        None=>{
+            Err(())
+        }
+    }
+
 }
 
 pub fn byte_to_dec(val:u8) -> [u8;3]{
@@ -86,3 +119,12 @@ pub fn u32_to_hex(val:u32) -> [u8;8]{
         HEX_LOOKUP[ (val&0x0000000F) as usize]
     ]
 }
+
+
+
+
+
+
+
+
+

@@ -17,18 +17,23 @@ use msp430fr2x5x_hal::{
 };
 use core::panic::PanicInfo;
 use embedded_hal::digital::v2::OutputPin;
-use embedded_hal::prelude::{_embedded_hal_blocking_delay_DelayMs, _embedded_hal_blocking_spi_Write};
+use embedded_hal::prelude::{
+    _embedded_hal_blocking_delay_DelayMs,
+    _embedded_hal_blocking_spi_Write
+};
 use embedded_hal::spi::MODE_0;
 use msp430::interrupt;
 use msp430fr2x5x_hal::spi::SPIBusConfig;
-use msp430fr2355_boosterpack::{
-    opt3001::DeviceOpt3001,
-    serial_utils::{print_bytes, u32_to_dec, byte_to_dec, init_serial, u16_to_dec}
-};
+use msp430fr2355_boosterpack::{opt3001::DeviceOpt3001, serial_utils::{print_bytes, u32_to_dec, byte_to_dec, init_serial, u16_to_dec}, serial_utils, stream};
 use st7735_lcd::ST7735;
-use embedded_graphics::{image::Image, prelude::*};
+use embedded_graphics::{
+    image::Image,
+    prelude::*,
+    primitives::{Rectangle}
+};
 use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
 use tinybmp::Bmp;
+use msp430fr2355_boosterpack::stream::ImageContainer;
 
 // #[cfg(debug_assertions)]
 #[panic_handler]
@@ -66,18 +71,18 @@ fn main() -> ! {
 
         let pmm = Pmm::new(periph.PMM);
         let p4 = Batch::new(periph.P4).split(&pmm);
-        let (tx, mut _rx) = SerialConfig::new(
+        let (tx, rx) = SerialConfig::new(
             periph.E_USCI_A1,
             BitOrder::LsbFirst,
             BitCount::EightBits,
             StopBits::OneStopBit,
             Parity::NoParity,
             Loopback::NoLoop,
-            9600,
+            4800,
         )
         .use_aclk(&aclk)
         .split(p4.pin3.to_alternate1(), p4.pin2.to_alternate1());
-        init_serial(tx);
+        init_serial(rx, tx);
 
 
         print_bytes(b"Serial started\n\nConfiguring USCI B1 for SPI...\n");
@@ -105,16 +110,30 @@ fn main() -> ! {
         let mut screen = ST7735::new(periph_spi, lcd_rs, lcd_rst, false, false, 128, 128);
         match screen.init(&mut delay) {
             Ok(_) => {
-                screen.set_offset(2,1);
+                screen.set_offset(2,3);
                 screen.set_orientation(&st7735_lcd::Orientation::PortraitSwapped).ok();
+                screen.clear(Rgb565::BLACK).ok();
                 print_bytes(b"Screen initialized.\n");
-                let bmp_data = include_bytes!("../assets/rusty.bmp");
-                let bmp = Bmp::from_slice(bmp_data).unwrap();
-                Image::new(&bmp, Point::new(0, 0)).draw(&mut screen).ok();
-                // screen.set_pixel(50, 50, 0x0u16).ok();
-                // screen.set_pixel(51, 50, 0x0u16).ok();
-                // screen.set_pixel(50, 51, 0x0u16).ok();
-                // screen.set_pixel(51, 51, 0x0u16).ok();
+                let mut img_buf = ImageContainer::new();
+                let num_imgs = stream::get_num_images();
+                print_bytes(&serial_utils::u16_to_hex(num_imgs));
+                print_bytes(b" images available.\n");
+                for idx in 0u16 .. num_imgs{
+                    print_bytes(b"img: ");
+                    print_bytes(&serial_utils::u16_to_hex(idx));
+                    print_bytes(b"\n");
+                    img_buf.request_img(idx);
+                    let rect = Rectangle::new(
+                        Point::new(img_buf.x as i32, img_buf.y as i32),
+                        Size::new(8, 8)
+                    );
+                    screen.fill_contiguous(&rect, img_buf.colors).ok();
+                }
+
+
+                // let bmp_data = include_bytes!("../assets/rusty.bmp");
+                // let bmp = Bmp::from_slice(bmp_data).unwrap();
+                // Image::new(&bmp, Point::new(0, 0)).draw(&mut screen).ok();
 
                 // loop {
                 //     screen.clear(Rgb565::BLUE).ok();
@@ -126,15 +145,6 @@ fn main() -> ! {
                 print_bytes(b"Screen init failed.\n")
             }
         }
-
-
-
-        //
-        // for i in 0u16 .. 10000u16{
-        //     print_bytes(&u16_to_dec(i));
-        //     print_bytes(b"\n");
-        //     delay.delay_ms(1000u16)
-        // }
     }
     loop{}
 }
