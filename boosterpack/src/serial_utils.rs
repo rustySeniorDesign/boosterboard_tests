@@ -18,12 +18,12 @@ pub fn init_serial(rx: Rx<E_USCI_A1>, tx: Tx<E_USCI_A1>){
 
 pub fn print_bytes(bytes:&[u8]){
     unsafe {
-        if TX_GLOBAL.is_some() {
-            let tx = TX_GLOBAL.as_mut().expect("no tx!");
-            tx.bwrite_all(bytes).ok();
-            // tx.bflush().ok();
+        match TX_GLOBAL.as_mut() {
+            Some(mut tx) =>{
+                tx.bwrite_all(bytes).ok();
+            }
+            None=>{}
         }
-
     }
 }
 

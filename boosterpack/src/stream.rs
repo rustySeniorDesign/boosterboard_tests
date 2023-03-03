@@ -20,10 +20,13 @@ enum ImageColors {
 
 }
 
+pub const SQUARE_LEN : usize = 16;
+const BUF_SIZE : usize = SQUARE_LEN*SQUARE_LEN;
+
 pub struct  ImageContainer {
     pub x: u8,
     pub y: u8,
-    pub colors: [Rgb565;64]
+    pub colors: [Rgb565;BUF_SIZE]
 }
 
 fn to_u8(num: u16) -> [u8;2]{
@@ -35,12 +38,17 @@ fn to_u16(arr: &[u8]) -> u16{
     ((arr[1] as u16) << 8) | (arr[0] as u16)
 }
 
+#[inline]
+fn to_u16_msb(arr: &[u8]) -> u16{
+    ((arr[0] as u16) << 8) | (arr[1] as u16)
+}
+
 impl ImageContainer{
     pub fn new() -> Self{
         ImageContainer {
             x: 0,
             y: 0,
-            colors: [Rgb565::BLACK;64]
+            colors: [Rgb565::BLACK;BUF_SIZE]
         }
     }
 
@@ -49,22 +57,19 @@ impl ImageContainer{
         serial_utils::print_bytes(&[0xFFu8, Command::GetImg.into(), split[0], split[1]]);
         let mut byte_buf = [0u8];
 
-        serial_utils::get_bytes(&mut byte_buf).expect("a");
+        serial_utils::get_bytes(&mut byte_buf).ok();
         serial_utils::print_bytes(&[0xAAu8]);
         self.x = byte_buf[0];
-        serial_utils::get_bytes(&mut byte_buf).expect("b");
-        serial_utils::print_bytes(&[0xAAu8]);
+        serial_utils::get_bytes(&mut byte_buf).ok();
         self.y = byte_buf[0];
-        let mut rd_buf = [0u8;8];
-        for i in (0..self.colors.len()).step_by(4){
+        let mut rd_buf = [0u8;256];
+        for i in (0..self.colors.len()).step_by(128){
             serial_utils::print_bytes(&[0xAAu8]);
-            serial_utils::get_bytes(&mut rd_buf).expect("c");
-            self.colors[i] = Rgb565::from(RawU16::new(to_u16(&rd_buf[0..2])));
-            self.colors[i+1] = Rgb565::from(RawU16::new(to_u16(&rd_buf[2..4])));
-            self.colors[i+2] = Rgb565::from(RawU16::new(to_u16(&rd_buf[4..6])));
-            self.colors[i+3] = Rgb565::from(RawU16::new(to_u16(&rd_buf[6..8])));
-            // serial_utils::print_bytes(&[0xAAu8]);
-            // serial_utils::print_bytes(&[0xAAu8]);
+            serial_utils::get_bytes(&mut rd_buf).ok();
+            for j in (0..256).step_by(2){
+                let idx= j >> 1;
+                self.colors[i+idx] = Rgb565::from(RawU16::new(to_u16(&rd_buf[j..j+2])));
+            }
         }
     }
 }

@@ -3,6 +3,7 @@
 #![no_main]
 #![no_std]
 
+use core::panic::PanicInfo;
 use msp430_rt::entry;
 use msp430fr2355::{E_USCI_A1, E_USCI_B0, E_USCI_B1};
 use msp430fr2x5x_hal::{
@@ -15,7 +16,6 @@ use msp430fr2x5x_hal::{
     spi::{SPIPins},
     pac
 };
-use core::panic::PanicInfo;
 use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::prelude::{
     _embedded_hal_blocking_delay_DelayMs,
@@ -32,10 +32,10 @@ use embedded_graphics::{
     primitives::{Rectangle}
 };
 use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
-use tinybmp::Bmp;
+// use tinybmp::Bmp;
 use msp430fr2355_boosterpack::stream::ImageContainer;
+use msp430::asm;
 
-// #[cfg(debug_assertions)]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     // Disable interrupts to prevent further damage.
@@ -55,15 +55,13 @@ fn panic(_info: &PanicInfo) -> ! {
     }
 }
 
-// #[cfg(not(debug_assertions))]
-// use panic_never as _;
 
 #[entry]
 fn main() -> ! {
     if let Some(periph) = msp430fr2355::Peripherals::take() {
         let mut fram = Fram::new(periph.FRCTL);
         let _wdt = Wdt::constrain(periph.WDT_A);
-        let (smclk, aclk, mut delay) = ClockConfig::new(periph.CS)
+        let (smclk, _aclk, mut delay) = ClockConfig::new(periph.CS)
             .mclk_dcoclk(DcoclkFreqSel::_16MHz, MclkDiv::_1)
             .smclk_on(SmclkDiv::_2)
             .aclk_refoclk()
@@ -78,9 +76,9 @@ fn main() -> ! {
             StopBits::OneStopBit,
             Parity::NoParity,
             Loopback::NoLoop,
-            4800,
+            38400,
         )
-        .use_aclk(&aclk)
+        .use_smclk(&smclk)
         .split(p4.pin3.to_alternate1(), p4.pin2.to_alternate1());
         init_serial(rx, tx);
 
@@ -119,13 +117,14 @@ fn main() -> ! {
                 print_bytes(&serial_utils::u16_to_hex(num_imgs));
                 print_bytes(b" images available.\n");
                 for idx in 0u16 .. num_imgs{
-                    print_bytes(b"img: ");
+                    print_bytes(b"get img: ");
                     print_bytes(&serial_utils::u16_to_hex(idx));
                     print_bytes(b"\n");
+                    asm::barrier();
                     img_buf.request_img(idx);
                     let rect = Rectangle::new(
                         Point::new(img_buf.x as i32, img_buf.y as i32),
-                        Size::new(8, 8)
+                        Size::new(stream::SQUARE_LEN as u32, stream::SQUARE_LEN as u32)
                     );
                     screen.fill_contiguous(&rect, img_buf.colors).ok();
                 }
@@ -151,7 +150,12 @@ fn main() -> ! {
 
 #[no_mangle]
 extern "C" fn abort() -> ! {
-    panic!();
+    // panic!();
+    loop {
+        // Prevent optimizations that can remove this loop.
+        msp430::asm::barrier();
+    }
+
 }
 
 
