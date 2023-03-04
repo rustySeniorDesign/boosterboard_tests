@@ -1,4 +1,4 @@
-//! A few utilities related to serial output
+//! A few utilities related to serial I/O
 
 use nb;
 use embedded_hal::prelude::_embedded_hal_blocking_serial_Write;

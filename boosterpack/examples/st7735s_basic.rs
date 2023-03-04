@@ -92,7 +92,7 @@ fn main() -> ! {
         // P4.4: CS
         // P3.2: rs
         let mut spi_config : SPIBusConfig<E_USCI_B1> = SPIBusConfig::new(periph.E_USCI_B1, MODE_0, true);
-        spi_config.use_smclk(&smclk, 5);
+        spi_config.use_smclk(&smclk, 1);
         let mut periph_spi : SPIPins<E_USCI_B1> = spi_config.spi_pins(
             p4.pin7.to_alternate1(),
             p4.pin6.to_alternate1(),
@@ -102,8 +102,8 @@ fn main() -> ! {
         unsafe{interrupt::enable();}
         print_bytes(b"Config successful\n\nInitializing screen...\n");
         let p3 = Batch::new(periph.P3).split(&pmm);
-        let mut lcd_rst = p4.pin0.to_output();
-        let mut lcd_rs = p3.pin2.to_output();
+        let lcd_rst = p4.pin0.to_output();
+        let lcd_rs = p3.pin2.to_output();
         // periph_spi.write(&[0xC4,0x51]).ok();
         let mut screen = ST7735::new(periph_spi, lcd_rs, lcd_rst, false, false, 128, 128);
         match screen.init(&mut delay) {
@@ -112,33 +112,21 @@ fn main() -> ! {
                 screen.set_orientation(&st7735_lcd::Orientation::PortraitSwapped).ok();
                 screen.clear(Rgb565::BLACK).ok();
                 print_bytes(b"Screen initialized.\n");
-                let mut img_buf = ImageContainer::new();
                 let num_imgs = stream::get_num_images();
                 print_bytes(&serial_utils::u16_to_hex(num_imgs));
-                print_bytes(b" images available.\n");
+                print_bytes(b" images available.\nGetting images...\n");
                 for idx in 0u16 .. num_imgs{
-                    print_bytes(b"get img: ");
-                    print_bytes(&serial_utils::u16_to_hex(idx));
-                    print_bytes(b"\n");
-                    asm::barrier();
-                    img_buf.request_img(idx);
-                    let rect = Rectangle::new(
-                        Point::new(img_buf.x as i32, img_buf.y as i32),
-                        Size::new(stream::SQUARE_LEN as u32, stream::SQUARE_LEN as u32)
-                    );
-                    screen.fill_contiguous(&rect, img_buf.colors).ok();
+                    // print_bytes(b"get img: ");
+                    // print_bytes(&serial_utils::u16_to_hex(idx));
+                    // print_bytes(b"\n");
+                    stream::request_img(idx, &mut screen);
+                    // let rect = Rectangle::new(
+                    //     Point::new(img_buf.x as i32, img_buf.y as i32),
+                    //     Size::new(stream::SQUARE_LEN as u32, stream::SQUARE_LEN as u32)
+                    // );
+                    // screen.fill_contiguous(&rect, img_buf.colors).ok();
                 }
-
-
-                // let bmp_data = include_bytes!("../assets/rusty.bmp");
-                // let bmp = Bmp::from_slice(bmp_data).unwrap();
-                // Image::new(&bmp, Point::new(0, 0)).draw(&mut screen).ok();
-
-                // loop {
-                //     screen.clear(Rgb565::BLUE).ok();
-                //     delay.delay_ms(1000u16);
-                //     screen.clear(Rgb565::RED).ok();
-                // }
+                print_bytes(b"Image transfer complete\n");
             }
             Err(_) => {
                 print_bytes(b"Screen init failed.\n")
@@ -150,12 +138,7 @@ fn main() -> ! {
 
 #[no_mangle]
 extern "C" fn abort() -> ! {
-    // panic!();
-    loop {
-        // Prevent optimizations that can remove this loop.
-        msp430::asm::barrier();
-    }
-
+    panic!();
 }
 
 

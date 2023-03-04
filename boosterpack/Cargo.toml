@@ -38,7 +38,7 @@ overflow-checks = false
 debug-assertions = false
 
 [profile.dev]
-opt-level = 1
+opt-level = "s"
 codegen-units = 1
 debug = true
 

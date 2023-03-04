@@ -3,6 +3,7 @@
 pub mod opt3001;
 pub mod serial_utils;
 pub mod stream;
+pub mod queuebuf;
 
 pub use msp430fr2355 as pac;
 pub use embedded_hal as hal;
