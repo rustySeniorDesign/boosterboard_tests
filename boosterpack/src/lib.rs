@@ -1,5 +1,8 @@
 #![no_std]
 
+#![feature(abi_msp430_interrupt)]
+#![feature(core_panic)]
+
 pub mod opt3001;
 pub mod serial_utils;
 pub mod stream;

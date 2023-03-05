@@ -24,7 +24,6 @@ use msp430fr2355_boosterpack::{
 use msp430fr2355_boosterpack::serial_utils::init_serial;
 
 
-#[cfg(debug_assertions)]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     // Disable interrupts to prevent further damage.
@@ -53,7 +52,7 @@ fn main() -> ! {
     if let Some(periph) = msp430fr2355::Peripherals::take() {
         let mut fram = Fram::new(periph.FRCTL);
         let _wdt = Wdt::constrain(periph.WDT_A);
-        let (_smclk, aclk) = ClockConfig::new(periph.CS)
+        let (_smclk, aclk, _) = ClockConfig::new(periph.CS)
             .mclk_dcoclk(DcoclkFreqSel::_1MHz, MclkDiv::_1)
             .smclk_on(SmclkDiv::_2)
             .aclk_refoclk()
@@ -61,7 +60,7 @@ fn main() -> ! {
 
         let pmm = Pmm::new(periph.PMM);
         let p4 = Batch::new(periph.P4).split(&pmm);
-        let (tx, mut _rx) = SerialConfig::new(
+        let (tx, rx) = SerialConfig::new(
             periph.E_USCI_A1,
             BitOrder::LsbFirst,
             BitCount::EightBits,
@@ -74,7 +73,7 @@ fn main() -> ! {
         .use_aclk(&aclk)
         .split(p4.pin3.to_alternate1(), p4.pin2.to_alternate1());
 
-        init_serial(tx);
+        init_serial(rx, tx);
 
 
         print_bytes(b"Serial started\n\nConfiguring USCI B0 for I2C...\n");

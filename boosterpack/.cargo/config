@@ -12,8 +12,10 @@ rustflags = [
     "-C", "link-arg=-lmul_32", #enable HW multiplier
     "-C", "link-arg=-Wl,--allow-multiple-definition",
     "-C", "link-arg=-mcpu=msp430",
-
 ]
+
+[portable-atomic]
+portable_atomic_unsafe_assume_single_core = true
 
 [build]
 target = "msp430-none-elf"
@@ -22,3 +24,4 @@ target = "msp430-none-elf"
 # MSP430 doesn't come with libcore compiled already. But when it does, this
 # key can be removed.
 build-std = ["core"]
+
