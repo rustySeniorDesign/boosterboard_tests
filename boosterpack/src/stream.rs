@@ -39,6 +39,7 @@ use crate::serial_utils::u16_to_dec;
 enum Command{
     GetNumImg = 0x1,
     GetImg = 0x2,
+    GetStream = 0x3,
     ESCAPED = 0xFF,
 }
 
@@ -75,13 +76,24 @@ pub static mut DC_PIN : MaybeUninit<Pin<P3, Pin2, Output>> = MaybeUninit::uninit
 // }
 
 pub fn request_img<SPI: spi::Write<u8>, DC: OutputPin, RST: OutputPin>
-    (num: u16, screen : &mut ST7735<SPI, DC, RST>) {
+(num: u16, screen : &mut ST7735<SPI, DC, RST>) {
+    let split = to_u8(num);
+    serial_utils::print_bytes(&[0xFFu8, Command::GetImg.into(), split[0], split[1]]);
+    download(screen)
+}
+
+pub fn request_stream<SPI: spi::Write<u8>, DC: OutputPin, RST: OutputPin>
+(screen : &mut ST7735<SPI, DC, RST>) {
+    serial_utils::print_bytes(&[0xFFu8, Command::GetStream.into()]);
+    download(screen)
+}
+
+fn download<SPI: spi::Write<u8>, DC: OutputPin, RST: OutputPin>
+    (screen : &mut ST7735<SPI, DC, RST>) {
     let mut spi = unsafe{SCREEN_SPI_GLOBAL.assume_init_mut()};
     let mut rx = unsafe{RX_GLOBAL.assume_init_mut()};
     let mut dc = unsafe{DC_PIN.assume_init_mut()};
-    let split = to_u8(num);
 
-    serial_utils::print_bytes(&[0xFFu8, Command::GetImg.into(), split[0], split[1]]);
 
     let mut byte_buf = [0u8;6];
     serial_utils::get_bytes(&mut byte_buf).ok();
@@ -96,9 +108,7 @@ pub fn request_img<SPI: spi::Write<u8>, DC: OutputPin, RST: OutputPin>
 
     BYTES_LEFT.store(bytes_required, Release);
     screen.set_address_window(
-        start_x, start_y,
-        (end_x) as u16,
-        (end_y) as u16
+        start_x, start_y,end_x,end_y
     ).ok();
 
     dc.set_low().ok();
@@ -112,6 +122,7 @@ pub fn request_img<SPI: spi::Write<u8>, DC: OutputPin, RST: OutputPin>
         asm::nop();
     }
     rx.disable_rx_interrupts();
+    spi.write(&[0x00]).ok();
 }
 
 pub fn get_num_images() -> u16{
@@ -125,28 +136,28 @@ static SPI_TX_BUF: Mutex<UnsafeCell<QueueBuf<BUF_SIZE>>> =
     Mutex::new(UnsafeCell::new(QueueBuf::new([0u8;BUF_SIZE])));
 static BYTES_LEFT : AtomicU16 = AtomicU16::new(0u16);
 
-/// UART Rx interrupt from USB, forwards data to SPI Tx handler.
-#[interrupt]
-fn EUSCI_A1(cs : CriticalSection){
-    let mut rx = unsafe{RX_GLOBAL.assume_init_mut()};
-    let mut tx_buf : &mut QueueBuf<BUF_SIZE> = unsafe{&mut *SPI_TX_BUF.borrow(cs).get()};
-    let spi = unsafe{SCREEN_SPI_GLOBAL.assume_init_mut()};
-
-    spi.tx_interrupt_set(true);
-    tx_buf.put(rx.read_no_check());
-}
-
-/// SPI Tx interrupt for screen. 
-/// Should be able to transmit much faster than the UART Rx can receive.
-#[interrupt]
-fn EUSCI_B1(cs : CriticalSection){
-    let mut spi = unsafe{SCREEN_SPI_GLOBAL.assume_init_mut()};
-    let tx_buf : &mut QueueBuf<BUF_SIZE> = unsafe{&mut *SPI_TX_BUF.borrow(cs).get()};
-
-    spi.write_no_check(tx_buf.get());
-    BYTES_LEFT.sub(1, Relaxed);
-    spi.tx_interrupt_set(tx_buf.has_data());
-}
+// /// UART Rx interrupt from USB, forwards data to SPI Tx handler.
+// #[interrupt]
+// fn EUSCI_A1(cs : CriticalSection){
+//     let mut rx = unsafe{RX_GLOBAL.assume_init_mut()};
+//     let mut tx_buf : &mut QueueBuf<BUF_SIZE> = unsafe{&mut *SPI_TX_BUF.borrow(cs).get()};
+//     let spi = unsafe{SCREEN_SPI_GLOBAL.assume_init_mut()};
+//
+//     spi.tx_interrupt_set(true);
+//     tx_buf.put(rx.read_no_check());
+// }
+//
+// /// SPI Tx interrupt for screen.
+// /// Should be able to transmit much faster than the UART Rx can receive.
+// #[interrupt]
+// fn EUSCI_B1(cs : CriticalSection){
+//     let mut spi = unsafe{SCREEN_SPI_GLOBAL.assume_init_mut()};
+//     let tx_buf : &mut QueueBuf<BUF_SIZE> = unsafe{&mut *SPI_TX_BUF.borrow(cs).get()};
+//
+//     spi.write_no_check(tx_buf.get());
+//     BYTES_LEFT.sub(1, Relaxed);
+//     spi.tx_interrupt_set(tx_buf.has_data());
+// }
 
 
 

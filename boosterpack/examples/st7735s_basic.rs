@@ -36,6 +36,7 @@ use msp430fr2x5x_hal::{
     pac
 };
 use st7735_lcd::ST7735;
+use msp430fr2355_boosterpack::stream::request_stream;
 
 
 #[panic_handler]
@@ -123,17 +124,15 @@ fn main() -> ! {
                     print_bytes(&serial_utils::u16_to_hex(idx));
                     print_bytes(b"\n");
                     stream::request_img(idx, &mut screen);
-                    delay.delay_ms(1000u16);
-                    // screen.clear(Rgb565::BLUE).ok();
-                    // screen.clear(Rgb565::BLUE).ok();
-                    // let rect = Rectangle::new(
-                    //     Point::new(img_buf.x as i32, img_buf.y as i32),
-                    //     Size::new(stream::SQUARE_LEN as u32, stream::SQUARE_LEN as u32)
-                    // );
-                    // screen.fill_contiguous(&rect, img_buf.colors).ok();
+                    delay.delay_ms(100u16);
                 }
                 // screen.clear(Rgb565::BLACK).ok();
                 print_bytes(b"Image transfer complete\n");
+                screen.clear(Rgb565::BLACK).ok();
+                loop {
+                    request_stream(&mut screen);
+                    delay.delay_ms(10u16);
+                }
             }
             Err(_) => {
                 print_bytes(b"Screen init failed.\n")
