@@ -41,7 +41,7 @@ overflow-checks = false
 debug-assertions = false
 
 [profile.dev]
-opt-level = "z"
+opt-level = 1
 codegen-units = 1
 debug = true
 overflow-checks = false
