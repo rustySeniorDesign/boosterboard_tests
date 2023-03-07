@@ -122,7 +122,6 @@ fn download<SPI: spi::Write<u8>, DC: OutputPin, RST: OutputPin>
         asm::nop();
     }
     rx.disable_rx_interrupts();
-    spi.write(&[0x00]).ok();
 }
 
 pub fn get_num_images() -> u16{
@@ -136,28 +135,28 @@ static SPI_TX_BUF: Mutex<UnsafeCell<QueueBuf<BUF_SIZE>>> =
     Mutex::new(UnsafeCell::new(QueueBuf::new([0u8;BUF_SIZE])));
 static BYTES_LEFT : AtomicU16 = AtomicU16::new(0u16);
 
-// /// UART Rx interrupt from USB, forwards data to SPI Tx handler.
-// #[interrupt]
-// fn EUSCI_A1(cs : CriticalSection){
-//     let mut rx = unsafe{RX_GLOBAL.assume_init_mut()};
-//     let mut tx_buf : &mut QueueBuf<BUF_SIZE> = unsafe{&mut *SPI_TX_BUF.borrow(cs).get()};
-//     let spi = unsafe{SCREEN_SPI_GLOBAL.assume_init_mut()};
-//
-//     spi.tx_interrupt_set(true);
-//     tx_buf.put(rx.read_no_check());
-// }
-//
-// /// SPI Tx interrupt for screen.
-// /// Should be able to transmit much faster than the UART Rx can receive.
-// #[interrupt]
-// fn EUSCI_B1(cs : CriticalSection){
-//     let mut spi = unsafe{SCREEN_SPI_GLOBAL.assume_init_mut()};
-//     let tx_buf : &mut QueueBuf<BUF_SIZE> = unsafe{&mut *SPI_TX_BUF.borrow(cs).get()};
-//
-//     spi.write_no_check(tx_buf.get());
-//     BYTES_LEFT.sub(1, Relaxed);
-//     spi.tx_interrupt_set(tx_buf.has_data());
-// }
+/// UART Rx interrupt from USB, forwards data to SPI Tx handler.
+#[interrupt]
+fn EUSCI_A1(cs : CriticalSection){
+    let mut rx = unsafe{RX_GLOBAL.assume_init_mut()};
+    let mut tx_buf : &mut QueueBuf<BUF_SIZE> = unsafe{&mut *SPI_TX_BUF.borrow(cs).get()};
+    let spi = unsafe{SCREEN_SPI_GLOBAL.assume_init_mut()};
+
+    spi.tx_interrupt_set(true);
+    tx_buf.put(rx.read_no_check());
+}
+
+/// SPI Tx interrupt for screen.
+/// Should be able to transmit much faster than the UART Rx can receive.
+#[interrupt]
+fn EUSCI_B1(cs : CriticalSection){
+    let mut spi = unsafe{SCREEN_SPI_GLOBAL.assume_init_mut()};
+    let tx_buf : &mut QueueBuf<BUF_SIZE> = unsafe{&mut *SPI_TX_BUF.borrow(cs).get()};
+
+    spi.write_no_check(tx_buf.get());
+    BYTES_LEFT.sub(1, Relaxed);
+    spi.tx_interrupt_set(tx_buf.has_data());
+}
 
 
 
