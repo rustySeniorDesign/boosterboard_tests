@@ -9,7 +9,7 @@ use embedded_hal::prelude::{
     _embedded_hal_blocking_delay_DelayMs,
     _embedded_hal_blocking_spi_Write,
 };
-use embedded_hal::spi::MODE_0;
+use embedded_hal::spi::{FullDuplex, MODE_0};
 use embedded_graphics::{
     image::Image,
     prelude::*,
@@ -79,7 +79,7 @@ fn main() -> ! {
             StopBits::OneStopBit,
             Parity::NoParity,
             Loopback::NoLoop,
-            115200,
+            256000,
         )
         .use_smclk(&smclk)
         .split(p4.pin3.to_alternate1(), p4.pin2.to_alternate1());
@@ -126,6 +126,7 @@ fn main() -> ! {
                     stream::request_img(idx, &mut screen);
                     delay.delay_ms(100u16);
                 }
+                delay.delay_ms(2000u16);
                 // screen.clear(Rgb565::BLACK).ok();
                 print_bytes(b"Image transfer complete\n");
                 screen.clear(Rgb565::BLACK).ok();
