@@ -1,0 +1,47 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "cargo build",
+            "command": "cargo",
+            "args": [
+                "build",
+                "--manifest-path=boosterpack/Cargo.toml"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        },
+        {
+            "type": "shell",
+            "label": "flash",
+            "command": "mspdebug tilib \"prog \"boosterpack\\target\\msp430-none-elf\\debug\\${fileBasename}\""
+        },
+        {
+            "type": "shell",
+            "label": "start_gdb_server",
+            "command": "mspdebug --allow-fw-update tilib \"gdb\"",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": [
+                    {
+                        "regexp": ".",
+                        "file": 1,
+                        "location": 2,
+                        "message": 3
+                    }
+                ],
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "MSPDebug version",
+                    "endsPattern": "Bound to port 2000. Now waiting for connection..."
+                }
+            }
+        }
+    ]
+}

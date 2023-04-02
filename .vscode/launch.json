@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "gdb",
+            "request": "attach",
+            "name": "Rust Attach GDB",
+            "executable": "boosterpack/target/msp430-none-elf/debug/examples/${fileBasenameNoExtension}",
+            "target": "localhost:2000",
+            "remote": true,
+            "cwd": "${workspaceRoot}",
+            "gdbpath": "C:\\msys64\\mingw64\\bin\\gdb-multiarch.exe",
+            "preLaunchTask": "start_gdb_server",
+        }
+    ]
+}
