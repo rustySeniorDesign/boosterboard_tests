@@ -3,7 +3,7 @@
 #![no_main]
 #![no_std]
 
-use core::{panic::PanicInfo};
+use core::panic::PanicInfo;
 use embedded_hal::{digital::v2::*, prelude::_embedded_hal_adc_OneShot};
 use msp430_rt::entry;
 use msp430fr2355_boosterpack::serial_utils::*;
@@ -150,27 +150,16 @@ fn main() -> ! {
             ClockSource::MODCLK,
             ClockDivider::_1,
             Predivider::_1,
-            Resolution::_8BIT,
+            Resolution::_10BIT,
             SamplingRate::_200KSPS,
-            SampleTime::_128,
-        ).config_hw(&adc_pin);
+            SampleTime::_4,
+        )
+        .config_hw();
 
         loop {
-            print_bytes(b"Sampling...\n");
-            print_regs();
-            // let result: Result<u16, nb::Error<()>> = adc.read(&mut adc_pin);
+            let result: Result<u16, nb::Error<()>> = adc.read(&mut adc_pin);
 
-            adc.adc_start_conversion();
-            print_regs();
-            
-            while adc.adc_is_busy() {
-                // adc.adc_start_conversion();
-                // print_regs();
-            }
-            let result = adc.adc_get_result();
-            print_bytes(&u16_to_dec(result));
-
-            // print_bytes(&u16_to_dec(result.unwrap()));
+            print_bytes(&u16_to_dec(result.unwrap()));
         }
     }
     loop {}

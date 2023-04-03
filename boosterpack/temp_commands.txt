@@ -1,2 +1,0 @@
-prog target\msp430-none-elf\debug\examples\joystick_basic 
-run 
