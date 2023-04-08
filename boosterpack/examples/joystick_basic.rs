@@ -4,7 +4,8 @@
 #![no_std]
 
 use core::panic::PanicInfo;
-use embedded_hal::{digital::v2::*, prelude::_embedded_hal_adc_OneShot};
+use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::prelude::_embedded_hal_adc_OneShot;
 use msp430_rt::entry;
 use msp430fr2355_boosterpack::serial_utils::*;
 use msp430fr2x5x_hal::{
@@ -36,75 +37,6 @@ fn panic(_info: &PanicInfo) -> ! {
     }
 }
 
-fn print_regs_gpio() {
-    unsafe {
-        let p1_dir: u8 = *(0x204 as *mut u8);
-        let p1_sel0: u8 = *(0x20A as *mut u8);
-        let p1_sel1: u8 = *(0x20C as *mut u8);
-        let pm5_ctl0: u16 = *((0x120 + 0x10) as *mut u16);
-
-        print_bytes(b"p1_dir: ");
-        print_bytes(&u16_to_hex(p1_dir as u16));
-        print_bytes(b"\n");
-        print_bytes(b"p1_sel0: ");
-        print_bytes(&u16_to_hex(p1_sel0 as u16));
-        print_bytes(b"\n");
-        print_bytes(b"p1_sel1: ");
-        print_bytes(&u16_to_hex(p1_sel1 as u16));
-        print_bytes(b"\n");
-        print_bytes(b"pm5_ctl0: ");
-        print_bytes(&u16_to_hex(pm5_ctl0));
-        print_bytes(b"\n");
-    }
-}
-
-fn print_regs() {
-    unsafe {
-        let ctl0: u16 = *(0x700 as *mut u16);
-        let ctl1: u16 = *(0x702 as *mut u16);
-        let ctl2: u16 = *(0x704 as *mut u16);
-        let lo: u16 = *(0x706 as *mut u16);
-        let hi: u16 = *(0x708 as *mut u16);
-        let mctl0: u16 = *(0x70A as *mut u16);
-        let mem0: u16 = *(0x712 as *mut u16);
-        let ie: u16 = *(0x71A as *mut u16);
-        let ifg: u16 = *(0x71C as *mut u16);
-        let iv: u16 = *(0x71E as *mut u16);
-
-        print_bytes(b"ctl0: ");
-        print_bytes(&u16_to_hex(ctl0));
-        print_bytes(b"\n");
-        print_bytes(b"ctl1: ");
-        print_bytes(&u16_to_hex(ctl1));
-        print_bytes(b"\n");
-        print_bytes(b"ctl2: ");
-        print_bytes(&u16_to_hex(ctl2));
-        print_bytes(b"\n");
-        print_bytes(b"lo: ");
-        print_bytes(&u16_to_hex(lo));
-        print_bytes(b"\n");
-        print_bytes(b"hi: ");
-        print_bytes(&u16_to_hex(hi));
-        print_bytes(b"\n");
-        print_bytes(b"mctl0: ");
-        print_bytes(&u16_to_hex(mctl0));
-        print_bytes(b"\n");
-        print_bytes(b"mem0: ");
-        print_bytes(&u16_to_hex(mem0));
-        print_bytes(b"\n");
-        print_bytes(b"ie: ");
-        print_bytes(&u16_to_hex(ie));
-        print_bytes(b"\n");
-        print_bytes(b"ifg: ");
-        print_bytes(&u16_to_hex(ifg));
-        print_bytes(b"\n");
-        print_bytes(b"iv: ");
-        print_bytes(&u16_to_hex(iv));
-        print_bytes(b"\n");
-        print_bytes(b"==================\n");
-    }
-}
-
 #[entry]
 fn main() -> ! {
     if let Some(periph) = msp430fr2355::Peripherals::take() {
@@ -129,7 +61,6 @@ fn main() -> ! {
             BitOrder::LsbFirst,
             BitCount::EightBits,
             StopBits::OneStopBit,
-            // Launchpad UART-to-USB converter doesn't handle parity, so we don't use it
             Parity::NoParity,
             Loopback::NoLoop,
             9600,
@@ -139,10 +70,12 @@ fn main() -> ! {
 
         init_serial(rx, tx);
 
-        print_bytes(b"Serial started\n\nConfiguring ADC...\n");
+        print_bytes(b"Serial started\n");
 
-        // set port 1 pin 5 to analog input (P1Selx = 0b11)
-        // page 96
+        print_bytes(b"Configuring ADC...\n");
+
+        // ADC Channel 5 (P1.5) = Joystick X Axis
+        // see page 96 of datasheet -> (P1Selx = 0b11)
         let mut adc_pin = p1.pin5.to_alternate3();
 
         let mut adc = AdcConfig::new(
@@ -157,9 +90,16 @@ fn main() -> ! {
         .config_hw();
 
         loop {
-            let result: Result<u16, nb::Error<()>> = adc.read(&mut adc_pin);
+            let result: u16 = adc.read(&mut adc_pin).unwrap();
 
-            print_bytes(&u16_to_dec(result.unwrap()));
+            print_bytes(&u16_to_dec(result));
+
+            // turn on green LED if joystick pushed to far left or right
+            if result > 900 || result < 100 {
+                led_g.set_high().unwrap();
+            } else {
+                led_g.set_low().unwrap();
+            }
         }
     }
     loop {}
