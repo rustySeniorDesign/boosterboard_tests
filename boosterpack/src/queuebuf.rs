@@ -1,20 +1,16 @@
 //! Circular buffer datastructure implementation.
 
-
-use core::panicking::panic;
-
-
 // Size of buf needs to be a power of two to avoid calculating a modulo when incrementing
-pub struct QueueBuf<const Size: usize>{
-    buf:  [u8;Size],
+pub struct QueueBuf<const SIZE: usize>{
+    buf:  [u8;SIZE],
     mask: u16,
     curr: u16, //ptr to current slot to get from
     next: u16, //ptr to next available slot
     used: u16,
 }
 
-impl<const Size: usize> QueueBuf<Size>{
-    pub const fn new(arr: [u8;Size]) -> Self{
+impl<const SIZE: usize> QueueBuf<SIZE>{
+    pub const fn new(arr: [u8;SIZE]) -> Self{
         let len = arr.len();
         QueueBuf{
             buf: arr,

@@ -15,12 +15,6 @@ use msp430fr2x5x_hal::{
 };
 use nb::block;
 
-// #[cfg(debug_assertions)]
-// use panic_msp430 as _;
-
-#[cfg(not(debug_assertions))]
-use panic_never as _;
-
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     // Disable interrupts to prevent further damage.
@@ -58,7 +52,7 @@ fn main() -> ! {
         let mut led = Batch::new(periph.P1).split(&pmm).pin0.to_output();
         let p4 = Batch::new(periph.P4).split(&pmm);
         led.set_low().ok();
-        let (mut tx, mut rx) = SerialConfig::new(
+        let (mut tx, _rx) = SerialConfig::new(
             periph.E_USCI_A1,
             BitOrder::LsbFirst,
             BitCount::EightBits,
@@ -76,17 +70,6 @@ fn main() -> ! {
 
         loop {
             tx.bwrite_all(b"HELLO\n").ok();
-            // let ch = match block!(rx.read()) {
-            //     Ok(c) => c,
-            //     Err(err) => {
-            //         (match err {
-            //             RecvError::Parity => '!',
-            //             RecvError::Overrun(_) => '}',
-            //             RecvError::Framing => '?',
-            //         }) as u8
-            //     }
-            // };
-            // block!(tx.write(ch)).ok();
             led.toggle().ok();
         }
     } else {
