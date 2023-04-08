@@ -42,7 +42,7 @@ fn main() -> ! {
     if let Some(periph) = msp430fr2355::Peripherals::take() {
         let mut fram = Fram::new(periph.FRCTL);
         let _wdt = Wdt::constrain(periph.WDT_A);
-        let (_smclk, aclk, mut delay) = ClockConfig::new(periph.CS)
+        let (_smclk, aclk, _delay) = ClockConfig::new(periph.CS)
             .mclk_dcoclk(DcoclkFreqSel::_1MHz, MclkDiv::_1)
             .smclk_on(SmclkDiv::_2)
             .aclk_refoclk()

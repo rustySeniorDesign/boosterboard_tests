@@ -13,23 +13,12 @@ use msp430fr2x5x_hal::{
     serial::*,
     watchdog::Wdt,
 };
-use nb::block;
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     // Disable interrupts to prevent further damage.
     msp430::interrupt::disable();
-    // if let Some(location) = _info.location() {
-    //     print_bytes(b"Panic occurred in file ");
-    //     print_bytes(location.file().as_bytes());
-    //     print_bytes(b" at line ");
-    //     print_bytes(&u32_to_dec(location.line()));
-    //     print_bytes(b"\n");
-    // } else {
-    //     print_bytes(b"Panic handler was called, something bad happened.\n");
-    // }
     loop {
-        // Prevent optimizations that can remove this loop.
         msp430::asm::barrier();
     }
 }
