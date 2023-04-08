@@ -5,7 +5,7 @@
 
 use embedded_hal::prelude::*;
 use msp430_rt::entry;
-use msp430fr2355::{E_USCI_A1, E_USCI_B0};
+use msp430fr2355::{E_USCI_B0};
 use msp430fr2x5x_hal::{
     clock::{ClockConfig, DcoclkFreqSel, MclkDiv, SmclkDiv},
     fram::Fram,
@@ -16,7 +16,6 @@ use msp430fr2x5x_hal::{
     i2c::*,
 };
 use core::panic::PanicInfo;
-use msp430fr2x5x_hal::clock::Aclk;
 use msp430fr2355_boosterpack::{
     opt3001::DeviceOpt3001,
     serial_utils::{print_bytes, u32_to_dec, byte_to_dec}
@@ -42,9 +41,6 @@ fn panic(_info: &PanicInfo) -> ! {
         msp430::asm::barrier();
     }
 }
-
-
-
 
 #[entry]
 fn main() -> ! {

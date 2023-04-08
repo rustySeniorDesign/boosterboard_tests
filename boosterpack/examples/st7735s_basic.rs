@@ -4,36 +4,30 @@
 #![no_std]
 
 use core::panic::PanicInfo;
-use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::prelude::{
-    _embedded_hal_blocking_delay_DelayMs,
-    _embedded_hal_blocking_spi_Write,
+    _embedded_hal_blocking_delay_DelayMs
 };
-use embedded_hal::spi::{FullDuplex, MODE_0};
+use embedded_hal::spi::{MODE_0};
 use embedded_graphics::{
-    image::Image,
     prelude::*,
-    primitives::{Rectangle},
     pixelcolor::{Rgb565, RgbColor}
 };
-use msp430::{asm, interrupt};
+use msp430::{interrupt};
 use msp430_rt::entry;
-use msp430fr2355::{E_USCI_A1, E_USCI_B0, E_USCI_B1};
+use msp430fr2355::{E_USCI_B1};
 use msp430fr2355_boosterpack::{
-    opt3001::DeviceOpt3001,
-    serial_utils::{print_bytes, u32_to_dec, byte_to_dec, init_serial, u16_to_dec},
+    serial_utils::{print_bytes, init_serial},
     serial_utils,
     stream,
 };
 use msp430fr2x5x_hal::{
-    clock::{ClockConfig, DcoclkFreqSel, MclkDiv, SmclkDiv, Aclk},
+    clock::{ClockConfig, DcoclkFreqSel, MclkDiv, SmclkDiv},
     fram::Fram,
     gpio::Batch,
     pmm::Pmm,
     serial::*,
     watchdog::Wdt,
-    spi::{SPIPins, SPIBusConfig},
-    pac
+    spi::{SPIPins, SPIBusConfig}
 };
 use st7735_lcd::ST7735;
 use msp430fr2355_boosterpack::stream::request_stream;
@@ -41,17 +35,8 @@ use msp430fr2355_boosterpack::stream::request_stream;
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    // Disable interrupts to prevent further damage.
     msp430::interrupt::disable();
-    // if let Some(location) = _info.location() {
-    //     print_bytes(b"Panic occurred in file ");
-    //     print_bytes(location.file().as_bytes());
-    //     print_bytes(b" at line ");
-    //     print_bytes(&u32_to_dec(location.line()));
-    //     print_bytes(b"\n");
-    // } else {
     print_bytes(b"Panic handler was called.\n");
-    // }
     loop {
         // Prevent optimizations that can remove this loop.
         msp430::asm::barrier();
@@ -72,7 +57,7 @@ fn main() -> ! {
 
         let pmm = Pmm::new(periph.PMM);
         let p4 = Batch::new(periph.P4).split(&pmm);
-        let (tx, mut rx) = SerialConfig::new(
+        let (tx, rx) = SerialConfig::new(
             periph.E_USCI_A1,
             BitOrder::LsbFirst,
             BitCount::EightBits,
@@ -96,7 +81,7 @@ fn main() -> ! {
         let mut spi_config : SPIBusConfig<E_USCI_B1> =
             SPIBusConfig::new(periph.E_USCI_B1, MODE_0, true);
         spi_config.use_smclk(&smclk, 10);
-        let mut periph_spi : SPIPins<E_USCI_B1> = spi_config.spi_pins(
+        let periph_spi : SPIPins<E_USCI_B1> = spi_config.spi_pins(
             p4.pin7.to_alternate1(),
             p4.pin6.to_alternate1(),
             p4.pin5.to_alternate1(),
@@ -127,7 +112,6 @@ fn main() -> ! {
                     delay.delay_ms(100u16);
                 }
                 delay.delay_ms(2000u16);
-                // screen.clear(Rgb565::BLACK).ok();
                 print_bytes(b"Image transfer complete\n");
                 screen.clear(Rgb565::BLACK).ok();
                 loop {
